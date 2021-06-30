@@ -1,0 +1,67 @@
+{% extends 'base.html' %}
+{% block body %}
+    <!DOCTYPE html>
+    <html lang="ru">
+    <head>
+        <meta charset="UTF-8">
+        <title>Data base settings</title>
+    <script type="text/javascript" src="{{ url_for('static', filename = 'js/main.js') }}"></script>
+    </head>
+    {% for key in tables.keys() %}
+        {% if loop.first %}
+            <body onload="ChangeTable({{ key }})">
+        {% endif %}
+    {% else %}
+        <body>
+    {% endfor %}
+
+    <div class="alert-warning">
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                {% for message in messages %}
+                    <p class="mb-1 text-warning">{{ message }}</p>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+    </div>
+
+    <table>
+        <tr>
+            <td>
+                <form method="POST" class="row m-0" id="form_file" enctype="multipart/form-data">
+                    <label for="filename"><strong>Название базы данных</strong></label>
+                    <input type="text" class="form-control" name="file_name" id="filename"
+                           value="{{ filename }}"> <br>
+                    <input type="button" class="btn btn-success m-1 col" onclick="save_excel('/save_excel/')"
+                           value="сохранить файл excel">
+                    <input type="button" class="btn btn-success m-1 col"  onclick="create_download_delete('/create_SQLite/')"
+                           value="скачать sqlite.db">
+                    <input type="button" class="btn btn-success m-1 col"  onclick="create_download_delete('/create_SQLite_TXT/')"
+                           value="скачать скрипт sqlite.txt">
+                    <input type="button" class="btn btn-success m-1 col" onclick="create_download_delete('/create_MySQL_TXT/')"
+                           value="скачать скрипт mysql.txt">
+                </form>
+
+                <form action="" class="row m-0 mt-5">
+                    <label for="{{ filename }}"><strong>Выберите таблицу</strong></label>
+                    <select id="{{ filename }}" class="form-select" onchange="ChangeTable(this.value)">
+                        {% for key in tables.keys() %}
+                            <option value="{{ tables[key].index }}">{{ tables[key].name }}</option>
+                        {% else %}
+                            <option value="{{ None }}">Таблиц нет</option>
+                        {% endfor %}
+                    </select>
+                </form>
+
+            </td>
+        </tr>
+        <tr>
+            <td>
+                <div id="result"></div>
+            </td>
+        </tr>
+    </table>
+
+
+    </body>
+{% endblock %}

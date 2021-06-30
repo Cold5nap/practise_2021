@@ -1,0 +1,53 @@
+{% extends 'base.html' %}
+
+{% block body %}
+
+    <div class="col-md-5 " xmlns="http://www.w3.org/1999/html">
+        <h4 class="me-3 py-2 text-dark text-decoration-none">Регистрация</h4>
+        <div class="alert-warning">
+            {% with messages = get_flashed_messages() %}
+                {% if messages %}
+                    {% for message in messages %}
+                        <p class="mb-1 text-warning">{{ message }}</p>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+            <hr class="my-1">
+        </div>
+
+
+        <form class="needs-validation" novalidate="" method="POST">
+            <div class="col-6">
+                <label for="login" class="form-label">Логин</label>
+                <input name="login" id="login" type="text" class="form-control" placeholder="Sergey">
+                <div class="invalid-feedback">
+                    <p>Логин некорректный!</p>
+                </div>
+            </div>
+
+            <div class="col-6">
+                <label for="password" class="form-label">Пароль</label>
+                <input name="password" id="password" type="text" class="form-control" placeholder="Sergey1">
+                <div class="invalid-feedback">
+                    Пароль некорретный!
+                </div>
+            </div>
+
+            <div class="col-6">
+                <label for="password2" class="form-label">Пароль</label>
+                <input name="password2" id="password2" type="text" class="form-control" placeholder="Sergey1">
+                <div class="invalid-feedback">
+                    Пароль некорретный!
+                </div>
+            </div>
+
+            <br>
+            <input type="submit" value="Зарегистрироваться" class="w-70 btn btn-success btn-lg">
+            <a class="btn btn-success btn-lg" data-bs-toggle="offcanvas" role="button" aria-controls="offcanvasExample"
+               href="{{ url_for('login_page') }}">Войти</a>
+
+
+        </form>
+    </div>
+
+{% endblock %}

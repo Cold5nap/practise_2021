@@ -1,0 +1,43 @@
+{% extends 'base.html' %}
+
+{% block body %}
+
+    <p>Здраствуйте, {{ current_user.login }}.</p>
+    {% if 'admin' in current_user.roles %}
+        <p>Перейти на страничку для админа:
+            <a class="btn btn-success btn-sm" data-bs-toggle="offcanvas" role="button"
+               aria-controls="offcanvasExample" href="admin">Администратор</a>
+        </p>
+    {% endif %}
+
+    {% if files|length %}
+        <p class="mt-5 h5">Ваши сохраненные Excel файл для преобразования</p>
+        <table class="mx-3 table table-striped table-hover center">
+            <thead>
+            <tr class="row">
+                <th scope="col" class="col-3">Название</th>
+                <th scope="col" class="col-3">Действие</th>
+            </tr>
+            </thead>
+            <tbody>
+
+            {% for file in files %}
+                <tr class="row">
+                    <td class="center col-3">{{ file.name }}</td>
+                    <td class="center col-3">
+                        <a class="btn btn-success btn-sm" href="edit_file/{{ file.id }}">Показать редактор</a>
+                        <a class="btn btn-success btn-sm" href="delete_file/{{ file.id }}">Удалить</a>
+                    </td>
+                </tr>
+            {% endfor %}
+
+            </tbody>
+        </table>
+    {% endif %}
+    <form method=post enctype="multipart/form-data">
+        <label class="h5" for="file">Выберите файл Exel для преобразования в реляционную таблицу
+        </label>
+        <input type="file" id="file" name="file" accept=".xlsx" class="form-control " style="width: 600px;">
+        <input type="submit" value="Преобразовать" class="btn btn-success mt-3" style="width: 600px;">
+    </form>
+{% endblock %}

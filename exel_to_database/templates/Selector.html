@@ -1,0 +1,20 @@
+<select id ="fk_atr" {{disabled}} onchange="ChangeFKAtr({{index}}, this.value)">
+    {% for key in dict.keys() %}
+    {% if atr.fk_atr == dict[key].fk_atr %}
+    <option selected value="{{dict[key].name}}">{{dict[key].name}}</option>
+    {% else %}
+    <option value="{{dict[key].name}}">{{dict[key].name}}</option>
+    {% endif %}
+    {% endfor %}
+    <option value=""></option>
+</select>
+<script>
+function ChangeFKAtr(atr_index, value) {
+    url = 'http://127.0.0.1:5000/change_fk_atr/';
+    $.post( url, {index: atr_index, val: value} ).done(function( data ) {
+        $( "#result" ).empty().append( data );
+        Load_selector();
+    });
+
+}
+</script>

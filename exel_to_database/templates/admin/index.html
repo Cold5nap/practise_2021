@@ -1,0 +1,11 @@
+{% extends 'admin/master.html' %}
+
+{% block body %}
+    {{ super() }}
+        {% if "admin" in current_user.roles %}
+            <p>Здраствуйте, {{ current_user.login }}, вы перешли на страницу администратора.</p>
+        {% else %}
+            <p>{{ current_user.login }}, у вас нет прав Администратора. Войдите с учетной записи администратора</p>
+        {% endif %}
+    <a class="btn btn-success btn-lg" data-bs-toggle="offcanvas" role="button" aria-controls="offcanvasExample" href={{ url_for('index') }}>Главная страничка</a>
+{% endblock %}

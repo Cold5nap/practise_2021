@@ -1,0 +1,14 @@
+{{dict.keys()|length}}
+<select id ="fk_atr">
+    <option value=""></option>
+    {% for key in dict.keys() %}
+    {% if atr == dict[key] %}
+    <option selected value="{{dict[key]}}">{{dict[key]}}</option>
+    {% else %}
+    <option value="{{dict[key]}}">{{dict[key]}}</option>
+    {% endif %}
+    {% endfor %}
+</select>
+{% set non_selected1 = "selected" %}
+{% set non_selected1 = "" %}
+{{non_selected1}}

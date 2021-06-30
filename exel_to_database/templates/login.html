@@ -1,0 +1,39 @@
+{% extends 'base.html' %}
+
+{% block body %}
+
+    <div class="col-md-5 " xmlns="http://www.w3.org/1999/html">
+        <h4 class="me-3 py-2 text-dark text-decoration-none">Вход</h4>
+
+    <div class="alert-warning">
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                {% for message in messages %}
+                    <p class="mb-1 text-warning">{{ message }}</p>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+    </div>
+        <hr class="my-2">
+
+        <form class="needs-validation" novalidate="" method="POST">
+
+            <div class="col-8">
+                <label for="login" class="form-label">Логин</label>
+                <input name="login" id="login" type="text" class="form-control" placeholder="Sergey">
+            </div>
+
+            <div class="col-8">
+                <label for="password" class="form-label">Пароль</label>
+                <input name="password" id="password" type="text" class="form-control" placeholder="Sergey1">
+            </div>
+
+            <br>
+            <input type="submit" value="Войти" class="w-70 btn btn-success btn-lg">
+            <a class="btn btn-success btn-lg" data-bs-toggle="offcanvas" role="button" aria-controls="offcanvasExample"
+               href="{{ url_for('register') }}">Зарегистрироваться</a>
+
+        </form>
+    </div>
+
+{% endblock %}

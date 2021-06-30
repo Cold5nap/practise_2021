@@ -1,0 +1,151 @@
+<table class="table table-striped table-bordered">
+    <tr class="">
+        <td class="border">
+            Аттрибут
+        </td>
+        <td class="border">
+            Тип
+        </td>
+        <td class="border">
+            Ограничения
+        </td>
+        <td class="border">
+            Внешний ключ
+        </td>
+    </tr>
+    {% for key in attributes.keys() %}
+        {% set atr = attributes[key] %}
+        <tr class="border-bottom">
+            <td class="p-3">
+                <form method="post" action="" id="form_name{{ atr.index }}">
+                    <div class="label"> Имя</div>
+                    <input type="text" class="form-control  " name="value" value="{{ atr.name }}"
+                           onchange="ChangeName({{ key }}, this.value)"> <br>
+                    <div class="label"> Индекс</div>
+                    <input type="text" class="form-control" name="index" value="{{ atr.index }}"
+                           onchange="ChangeIndex({{ key }}, this.value)">
+                </form>
+            </td>
+            <td>
+                <form method="post" action="" id="form_type{{ atr.index }}" class="">
+                        {% for t in all_types_list %}
+                        {% if t == atr.atr_type %}
+                            <input  checked type="radio" value="{{ t.value }}"
+                                   onchange="ChangeType({{ key }}, this.value)"> {{ t.value }}
+                        {% else %}
+                            <input  type="radio" value="{{ t.value }}" onchange="ChangeType({{ key }}, this.value)">
+                            {{ t.value }}
+                        {% endif %}
+
+                        {% if t.value == "VARCHAR" %}
+                                <input type="text" class="-compress"
+                                       id="varchar_{{ key }}" value="{{ atr.char_count }}"
+                                       onchange="ChangeType({{ key }}, '{{ t.value }}')">
+                        {% endif %}
+                        <br>
+                    {% endfor %}
+
+                </form>
+            </td>
+            <!--Ограничения-->
+            <td class="p-3">
+                <form method="post" action="" id="form_cons{{ atr.index }}">
+                    {% for con in all_constraints_list %}
+                        {% if con in atr.constraints %}
+                            <input type="checkbox" value="{{ con.value }}" checked
+                                   onchange="ChangeConstraint({{ key }}, this.value)"> {{ con.value }}
+                        {% else %}
+                            <input type="checkbox" value="{{ con.value }}"
+                                   onchange="ChangeConstraint({{ key }}, this.value)"> {{ con.value }}
+                        {% endif %}
+                        <br>
+                    {% endfor %}
+                </form>
+            </td>
+            <!--FOREIGN KEY-->
+            <td class="p-3">
+                <form method="post" action="" id="form_fk{{ atr.index }}">
+                    {% set disabled = "disabled" %}
+                    {% set checked = "" %}
+                    {% if CE.foreign_key in atr.constraints %}
+                        {% set disabled = "" %}
+                        {% set checked = "checked" %}
+                    {% endif %}
+                    <input type="checkbox" value="FOREIGN KEY" {{ checked }}
+                           onchange="ChangeConstraint({{ key }}, this.value)"> FOREIGN KEY <br>
+
+                    <select id="fk_table_{{ key }}" {{ disabled }} name="{{ disabled }}"
+                            onchange="ChangeFKTable({{ key }}, this.value, '{{ disabled }}')">
+
+                        {% for key in table_dict.keys() %}
+                            {% if atr.fk_table == table_dict[key].name %}
+                                <option selected value="{{ table_dict[key].index }}"
+                                        name="{{ disabled }}">{{ table_dict[key].name }}</option>
+
+                            {% else %}
+                                <option value="{{ table_dict[key].index }}">{{ table_dict[key].name }}</option>
+                            {% endif %}
+                        {% endfor %}
+                        <option value=""></option>
+                    </select>
+                    <div id="fk_atr_div_{{ key }}"></div>
+
+
+                </form>
+            </td>
+        </tr>
+    {% endfor %}
+
+</table>
+
+<script>
+
+    function ChangeName(atr_index, value) {
+        url = 'http://127.0.0.1:5000/change_name/';
+        $.post(url, {index: atr_index, val: value}).done(function (data) {
+            $("#result").empty().append(data);
+        });
+        Load_selector();
+
+    }
+
+    function ChangeIndex(atr_index, value) {
+        url = 'http://127.0.0.1:5000/change_index/';
+        $.post(url, {index: atr_index, val: value}).done(function (data) {
+            $("#result").empty().append(data);
+            Load_selector();
+        });
+
+    }
+
+    function ChangeType(atr_index, value) {
+        url = 'http://127.0.0.1:5000/change_type/';
+        varchar_n = document.getElementById("varchar_" + atr_index).value;
+        $.post(url, {index: atr_index, val: value, varchar: varchar_n}).done(function (data) {
+            $("#result").empty().append(data);
+            Load_selector();
+        });
+
+    }
+
+    function ChangeConstraint(atr_index, value) {
+        url = 'http://127.0.0.1:5000/change_constraint/';
+        $.post(url, {index: atr_index, val: value}).done(function (data) {
+            $("#result").empty().append(data);
+            Load_selector();
+        });
+
+    }
+
+    function ChangeFKTable(atr_index, idx, dis) {
+        url = 'http://127.0.0.1:5000/change_fk_table/';
+        $.post(url, {index: atr_index, table_index: idx, dis: dis}).done(function (data) {
+            $(document.getElementById("fk_atr_div_" + atr_index)).empty().append(data);
+        });
+    }
+
+    function aa() {
+        alert("asd");
+    }
+
+</script>
