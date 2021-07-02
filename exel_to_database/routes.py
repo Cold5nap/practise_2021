@@ -185,7 +185,7 @@ def login_page():
                 login_user(user)
                 if user.is_admin:
                     return redirect('admin')
-                return redirect('/')
+                return redirect(url_for('index'))
             else:
                 flash('Логин или пароль неверны!')
         else:
