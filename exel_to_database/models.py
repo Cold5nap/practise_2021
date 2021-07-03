@@ -1,7 +1,7 @@
 from datetime import datetime
 from flask_login import UserMixin
 from flask_security import RoleMixin
-from exel_to_database import db, login_manager
+from exel_to_database import db
 from werkzeug.security import generate_password_hash, check_password_hash
 
 
@@ -50,7 +50,8 @@ class User(db.Model, UserMixin):
     # Нужен для security!
     active = db.Column(db.Boolean())
     _roles = db.relationship('Role', secondary=roles_users, backref=db.backref('users', lazy='dynamic'))
-    _files = db.relationship('File', cascade="all,delete", secondary=files_users)#, backref=db.backref('users', lazy='dynamic'))
+    _files = db.relationship('File', cascade="all,delete",
+                             secondary=files_users)  # , backref=db.backref('users', lazy='dynamic'))
 
     @property
     def roles(self):
@@ -104,8 +105,3 @@ class User(db.Model, UserMixin):
 
     def __repr__(self):
         return "<User('%s', '%s', '%s')>" % (self.login, self._roles, self._files)
-
-
-@login_manager.user_loader
-def load_user(user_id):
-    return User.query.get(user_id)

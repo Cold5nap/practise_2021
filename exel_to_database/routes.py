@@ -1,7 +1,7 @@
 import os
 import shutil
 
-from flask import render_template, request, redirect, flash, url_for, Blueprint, session, send_from_directory
+from flask import render_template, request, redirect, flash, url_for, session, send_from_directory
 from flask_login import login_user, login_required, logout_user, current_user
 from werkzeug.security import check_password_hash, generate_password_hash
 from werkzeug.utils import secure_filename
@@ -12,7 +12,6 @@ from exel_to_database.models import User, Role, File
 from exel_to_database.sql_enums import TypeEnum as TE, ConstraintEnum as CE
 from exel_to_database.sql_mapping import MySQLMapClass, SQLiteMapClass
 
-admin_bp = Blueprint('admin_blueprint', __name__)
 EXCEL_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), '../ExcelFiles')
 DB_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), '../DBs')
 CREATORS = {}
@@ -182,7 +181,12 @@ def login_page():
             user = User.query.filter_by(login=login).first()
 
             if user and check_password_hash(user.password, password):
-                login_user(user)
+                print(login_user(user))
+                print(current_user)
+                print(current_user.is_authenticated)
+                print(current_user.is_active)
+                print(current_user.is_anonymous)
+                print(current_user.get_id())
                 if user.is_admin:
                     return redirect('admin')
                 return redirect(url_for('index'))
@@ -190,8 +194,8 @@ def login_page():
                 flash('Логин или пароль неверны!')
         else:
             flash('Заполните пустые текстовые поля!')
-
-    return render_template('login.html')
+    users = User.query.all()
+    return render_template('login.html', users=users)
 
 
 @app.route('/register', methods=['GET', 'POST'])
@@ -208,6 +212,7 @@ def register():
         elif User.query.filter_by(login=login).first():
             flash('Данный пользователь уже зарегистрирован!')
         else:
+
             hash_pwd = generate_password_hash(password)
             new_user = User(login=login, password=hash_pwd, _roles=[Role.query.filter_by(name='participant').one()])
             db.session.add(new_user)
@@ -291,10 +296,10 @@ def logout():
     logout_user()
     return redirect(url_for('index'))
 
-
-@app.after_request
-def redirect_to_signin(response):
-    if response.status_code == 401:
-        return redirect(url_for('login_page') + '?next=' + request.url)
-
-    return response
+#
+# @app.after_request
+# def redirect_to_signin(response):
+#     if response.status_code == 401:
+#         return redirect(url_for('login_page') + '?next=' + request.url)
+#
+#     return response

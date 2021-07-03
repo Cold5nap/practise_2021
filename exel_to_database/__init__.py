@@ -1,7 +1,7 @@
 import os
 
 import flask_admin
-from flask import url_for, Flask
+from flask import url_for, Flask, Blueprint
 from flask_admin import helpers
 from flask_cors import CORS
 from flask_login import LoginManager
@@ -20,24 +20,23 @@ app.config['SECURITY_MSG_LOGIN'] = ('Возможности сайта дост�
 
 CORS(app)
 app.secret_key = os.urandom(24)
-
 db = SQLAlchemy(app)
-
 login_manager = LoginManager(app)
-
+# импорты размещены ниже, так как импортируют из этого файла app и db
 from exel_to_database import models, routes
 from exel_to_database.models import User, Role, File
 
-# Flask-Security
+# Flask-Security для создания странички админа
 user_datastore = SQLAlchemyUserDatastore(db, User, Role)
 security = Security(app, user_datastore)
 admin = flask_admin.Admin(app, name='Администратор', index_view=AdminIndexView(),
                           base_template='admin/master-extended.html')
 admin.add_view(UserModelView(User, db.session, name="Пользователи"))
-admin.add_view(UserModelView(File, db.session, name='Файлы Excel'))# , name="ФайлыExcel"
+admin.add_view(UserModelView(File, db.session, name='Файлы Excel'))
 db.create_all()
 
 
+# связь security views и admin template
 # define a context processor for merging flask-admin's template context into the
 # flask-security views.
 @security.context_processor
@@ -51,6 +50,10 @@ def security_context_processor():
 
 
 # Регистрация путей Blueprint
-from exel_to_database.routes import admin_bp
+admin_bp = Blueprint('admin_blueprint', __name__)
+app.register_blueprint(admin_bp, url_prefix="/admin")  # для перехода на admin
 
-app.register_blueprint(admin_bp, url_prefix="/admin")
+
+@login_manager.user_loader
+def load_user(user_id):
+    return User.query.get(user_id)
