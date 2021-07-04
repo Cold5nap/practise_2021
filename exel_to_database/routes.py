@@ -17,8 +17,8 @@ DB_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), '../DBs')
 CREATORS = {}
 
 
-@app.route('/', methods=['GET', 'POST'])
-@app.route('/practice.html', methods=['GET', 'POST'])
+#@app.route('/', methods=['GET', 'POST'])
+@app.route('/practice', methods=['GET', 'POST'])
 @login_required
 def index():
     files = current_user.files
@@ -181,12 +181,6 @@ def login_page():
             user = User.query.filter_by(login=login).first()
 
             if user and check_password_hash(user.password, password):
-                print(login_user(user))
-                print(current_user)
-                print(current_user.is_authenticated)
-                print(current_user.is_active)
-                print(current_user.is_anonymous)
-                print(current_user.get_id())
                 if user.is_admin:
                     return redirect('admin')
                 return redirect(url_for('index'))
@@ -294,7 +288,7 @@ def change_fk_atr():
 @app.route('/logout', methods=['GET', 'POST'])
 def logout():
     logout_user()
-    return redirect(url_for('index'))
+    return redirect(url_for('login_page'))
 
 #
 # @app.after_request
