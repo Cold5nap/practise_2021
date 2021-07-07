@@ -4,22 +4,25 @@ from flask_security import RoleMixin
 from exel_to_database import db
 from werkzeug.security import generate_password_hash, check_password_hash
 
+files_users = db.Table(
+    'files_users',
+    db.Column('user_id', db.Integer(), db.ForeignKey('users.id')),
+    db.Column('file_id', db.Integer(), db.ForeignKey('files.id'))
+)
+
 
 class File(db.Model):
     __tablename__ = 'files'
     id = db.Column(db.Integer(), primary_key=True)
     name = db.Column(db.String(80), nullable=False)
     path = db.Column(db.String(200), nullable=False, unique=True)
+    _users = db.relationship('User', cascade="all,delete",
+                             secondary=files_users, back_populates="_files")
+
 
     def __repr__(self):
         return "<File('%s', '%s')>" % (self.name, self.path)
 
-
-files_users = db.Table(
-    'files_users',
-    db.Column('user_id', db.Integer(), db.ForeignKey('users.id')),
-    db.Column('file_id', db.Integer(), db.ForeignKey('files.id'))
-)
 
 roles_users = db.Table(
     'roles_users',
@@ -51,7 +54,7 @@ class User(db.Model, UserMixin):
     active = db.Column(db.Boolean())
     _roles = db.relationship('Role', secondary=roles_users, backref=db.backref('users', lazy='dynamic'))
     _files = db.relationship('File', cascade="all,delete",
-                             secondary=files_users)  # , backref=db.backref('users', lazy='dynamic'))
+                             secondary=files_users, back_populates="_users")
 
     @property
     def roles(self):

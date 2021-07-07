@@ -17,8 +17,8 @@ DB_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), '../DBs')
 CREATORS = {}
 
 
-#@app.route('/', methods=['GET', 'POST'])
 @app.route('/practice', methods=['GET', 'POST'])
+#@app.route('/', methods=['GET', 'POST'])
 @login_required
 def index():
     files = current_user.files
@@ -86,7 +86,7 @@ def delete_tmp_file_by_name(name):
 @app.route('/save_excel/', methods=['GET', 'POST'])
 @login_required
 def save_excel():
-    new_file_name = request.form['file_name']
+    new_file_name = request.form['file_name'] + '.xlsx'
     new_path = EXCEL_FOLDER + '/' + session['file_prefix'] + new_file_name
     old_path = session['file_path']
 
@@ -109,7 +109,8 @@ def save_excel():
 def set_db():
     creator = DBCreator(session['file_path'])
     CREATORS[session['file_name']] = creator
-    return render_template('TablesSettings.html', filename=session['file_name'], tables=creator.tables)
+    file_name = session['file_name'][:-5]
+    return render_template('TablesSettings.html', filename=file_name, tables=creator.tables)
 
 
 @app.route('/show_table/', methods=['GET', 'POST'])
@@ -150,17 +151,16 @@ def create_SQLite():
     return file_name
 
 
-@app.route('/create_MySQL_TXT/', methods=['GET', 'POST'])
-@app.route('/create_SQLite_TXT/', methods=['GET', 'POST'])
+@app.route('/create/<string:name_txt>/', methods=['GET', 'POST'])
 @login_required
-def create_sql_txt():
+def create_sql_txt(name_txt):
     file_name = request.form['file_name'] + '.txt'
     if os.path.exists(os.path.join(DB_FOLDER, file_name)):  # удаляем, если такая имеется
         os.remove(os.path.join(DB_FOLDER, file_name))
 
-    if 'create_SQLite_TXT' in request.url:
+    if 'sqlite' == name_txt:
         CREATORS[session['file_name']].create_sql_txt(DB_FOLDER, file_name, SQLiteMapClass)
-    elif 'create_MySQL_TXT' in request.url:
+    elif 'mysql' == name_txt:
         CREATORS[session['file_name']].create_sql_txt(DB_FOLDER, file_name, MySQLMapClass)
     return file_name
 
@@ -181,6 +181,7 @@ def login_page():
             user = User.query.filter_by(login=login).first()
 
             if user and check_password_hash(user.password, password):
+                login_user(user)
                 if user.is_admin:
                     return redirect('admin')
                 return redirect(url_for('index'))
@@ -188,8 +189,7 @@ def login_page():
                 flash('Логин или пароль неверны!')
         else:
             flash('Заполните пустые текстовые поля!')
-    users = User.query.all()
-    return render_template('login.html', users=users)
+    return render_template('login.html')
 
 
 @app.route('/register', methods=['GET', 'POST'])
@@ -290,10 +290,5 @@ def logout():
     logout_user()
     return redirect(url_for('login_page'))
 
-#
-# @app.after_request
-# def redirect_to_signin(response):
-#     if response.status_code == 401:
-#         return redirect(url_for('login_page') + '?next=' + request.url)
-#
-#     return response
+
+

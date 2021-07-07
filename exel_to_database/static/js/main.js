@@ -29,9 +29,9 @@ async function save_excel(url_save) {
     });
     let rep = await reponse.text();
     if (rep === 'Успешно'){
-        location.replace('/')
+        location.replace(index_url);
     }else{
-        location.replace('/set_db/')
+        location.replace(set_db_url);
     }
 }
 

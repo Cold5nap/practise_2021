@@ -23,6 +23,22 @@ class UserModelView(sqla.ModelView):
                 return redirect(url_for('security.login', next=request.url))
 
 
+class FileModelView(sqla.ModelView):
+
+    def is_accessible(self):
+        return (current_user.is_active and
+                current_user.is_authenticated and
+                current_user.has_role('admin')
+                )
+
+    def _handle_view(self, name, **kwargs):
+        if not self.is_accessible():
+            if current_user.is_authenticated:
+                abort(403)
+            else:
+                return redirect(url_for('security.login', next=request.url))
+
+
 # Переадресация страниц (используется в шаблонах)
 class AdminIndexView(flask_admin.AdminIndexView):
     def is_visible(self):
