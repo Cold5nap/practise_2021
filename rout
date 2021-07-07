@@ -1,0 +1,300 @@
+import os
+import shutil
+
+from flask import render_template, request, redirect, flash, url_for, session, send_from_directory, g
+from flask_login import login_user, login_required, logout_user
+from werkzeug.security import check_password_hash, generate_password_hash
+from werkzeug.utils import secure_filename
+
+from exel_to_database import app, db
+from exel_to_database.db_creator import DBCreator
+from exel_to_database.models import User, Role, File
+from exel_to_database.sql_enums import TypeEnum as TE, ConstraintEnum as CE
+from exel_to_database.sql_mapping import MySQLMapClass, SQLiteMapClass
+
+EXCEL_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), '../ExcelFiles')
+DB_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), '../DBs')
+CREATORS = {}
+FILE_PATH = ''
+FILE_NAME = ''
+PREFIX = ''
+TABLE_INDEX = ''
+
+def get_messages():
+    messages = getattr(g, '_messages', None)
+    if messages is None:
+        g._messages = {}  # to store messages you may use a dictionary
+
+    return g._messages
+
+def add_message(message):
+    messages = get_messages()
+    messages[message[0]]=message[1]
+    setattr(g, '_messages', messages)
+    return messages
+
+@app.route('/practise', methods=['GET', 'POST'])
+#@app.route('/', methods=['GET', 'POST'])
+def index():
+	user = User.query.filter_by(active=True).first()
+	if user.active == True :
+		files = user.files
+		# приставка к пути файлов обеспечивает уникальность файлов в базе данных
+		PREFIX = '_' + user.login + '_'
+
+		# загрузка файла exel
+		if request.method == 'POST':
+			file = request.files['file']
+			if file:
+				filename = file.filename
+				if filename[-4:] == 'xlsx':
+					path = EXCEL_FOLDER + '/' + PREFIX + filename
+					#return path
+					file.save(path)
+					FILE_NAME = filename
+					FILE_PATH = path
+					add_message(('file_name',filename))
+					add_message(('file_path',path))
+					return redirect(url_for('set_db'))
+		return render_template('index.html', user=user, files=files)
+	return redirect(url_for('login_page'))
+
+
+@app.route('/about/')
+def about():
+    users = User.query.all()
+    return render_template('about.html', users=users)
+
+
+# переход для редактирования загруженного файла Exel
+@app.route('/edit_file/<int:id>', methods=['GET', 'POST'])
+def edit_file(id):
+    add_message(('file_path',File.query.get(id).path)) 
+    add_message(('file_name',File.query.get(id).name))
+    return redirect(url_for('set_db'))
+
+
+@app.route('/delete_file/<int:id>', methods=['GET', 'POST'])
+def delete_file_by_id(id):
+    file_path = File.query.filter_by(id=id).one().path
+    if os.path.exists(file_path):
+        os.remove(file_path)
+
+    File.query.filter_by(id=id).delete()
+    db.session.commit()
+    return redirect(url_for('index'))
+
+
+@app.route('/delete_tmp_file/<string:name>', methods=['GET', 'POST'])
+def delete_tmp_file_by_name(name):
+    origin = ''
+    if name[-4:] == 'xlsx':
+        origin = EXCEL_FOLDER
+    elif name[-2:] == 'db' or name[-3:] == 'txt':
+        origin = DB_FOLDER
+    path = origin + '/' + name
+    if File.query.filter_by(path=path).count() == 0 and os.path.exists(path):
+        os.remove(path)
+
+    return redirect(url_for('set_db'))
+
+
+@app.route('/save_excel/', methods=['GET', 'POST'])
+def save_excel():
+    new_file_name = request.form['file_name'] + '.xlsx'
+    new_path = EXCEL_FOLDER + '/' + PREFIX + new_file_name
+    old_path = FILE_PATH
+    user = User.query.filter_by(active=True).first()
+    for f in user.files:
+        if f.name == new_file_name:
+            flash('Файл с таким названием уже есть. Используйте другое название для его сохранения.')
+            return 'Файл с таким названием уже есть.'
+    if not os.path.exists(new_path):
+        shutil.copy(old_path, new_path)
+        if File.query.filter_by(path=old_path).count() == 0:
+            os.remove(old_path)
+
+    user.files.append(File(name=new_file_name, path=new_path))
+    db.session.commit()
+    return 'Успешно'
+
+
+@app.route('/set_db/', methods=['GET', 'POST'])
+def set_db():
+    return get_messages()#['file_path']
+    creator = DBCreator(FILE_PATH)
+    CREATORS[FILE_NAME] = creator
+    file_name = FILE_NAME[:-5]
+    return render_template('TablesSettings.html', filename=file_name, tables=creator.tables)
+
+
+@app.route('/show_table/', methods=['GET', 'POST'])
+def show_table():
+    if request.method == 'POST':
+        table_index = request.form.get('index')
+        if table_index == 'None':
+            return 'Таблицы нет'
+        else:
+            TABLE_INDEX = int(table_index)
+    else:
+        table_index = TABLE_INDEX
+
+    attributes = CREATORS[FILE_NAME].tables[table_index].attributes
+    all_types_list = TE.all_types_list()
+    all_constraints_list = CE.all_constraints_list()
+    table_dict = CREATORS[FILE_NAME].tables
+    return render_template('Table.html', attributes=attributes, all_types_list=all_types_list,
+                           all_constraints_list=all_constraints_list, CE=CE, table_dict=table_dict)
+
+
+def create_SQLite():
+    file_name = request.form['file_name'] + '.db'
+    if os.path.exists(os.path.join(DB_FOLDER, file_name)):  # удаляем, если такая имеется
+        os.remove(os.path.join(DB_FOLDER, file_name))
+
+    errors = CREATORS[FILE_NAME].create_SQLite_db(DB_FOLDER, file_name)
+    if not len(errors) == 0:
+        res = 'Errors: <br>'
+        for error in errors:
+            res += '%s<br>' % error
+        flash(res)
+
+    return file_name
+
+
+@app.route('/create/<string:name_txt>/', methods=['GET', 'POST'])
+def create_sql_txt(name_txt):
+    file_name = request.form['file_name'] + '.txt'
+    if os.path.exists(os.path.join(DB_FOLDER, file_name)):  # удаляем, если такая имеется
+        os.remove(os.path.join(DB_FOLDER, file_name))
+
+    if 'sqlite' == name_txt:
+        CREATORS[FILE_NAME].create_sql_txt(DB_FOLDER, file_name, SQLiteMapClass)
+    elif 'mysql' == name_txt:
+        CREATORS[FILE_NAME].create_sql_txt(DB_FOLDER, file_name, MySQLMapClass)
+    return file_name
+
+
+@app.route('/download/<file_name>', methods=['GET'])
+def download(file_name):
+    return send_from_directory(DB_FOLDER, file_name)
+
+
+@app.route('/login', methods=['GET', 'POST'])
+def login_page():
+    if request.method == 'POST':
+        login = request.form.get('login')
+        password = request.form.get('password')
+
+        if login and password:
+            user = User.query.filter_by(login=login).first()
+
+            if user and check_password_hash(user.password, password):
+                user.active = True
+                login_user(user)
+                db.session.commit()
+                if user.is_admin:
+                    return redirect('admin')
+                return redirect(url_for('index'))
+            else:
+                flash('Логин или пароль неверны!')
+        else:
+            flash('Заполните пустые текстовые поля!')
+    return render_template('login.html')
+
+
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    login = request.form.get('login')
+    password = request.form.get('password')
+    password2 = request.form.get('password2')
+
+    if request.method == 'POST':
+        if not (login and password and password2):
+            flash('Пожалуйста, заполните все поля!')
+        elif password != password2:
+            flash('Повторный ввод пароля невереный!')
+        elif User.query.filter_by(login=login).first():
+            flash('Данный пользователь уже зарегистрирован!')
+        else:
+
+            hash_pwd = generate_password_hash(password)
+            new_user = User(login=login, password=hash_pwd, _roles=[Role.query.filter_by(name='participant').one()])
+            db.session.add(new_user)
+            db.session.commit()
+
+            return redirect(url_for('login_page'))
+
+    return render_template('register.html')
+
+
+@app.route('/change_name/', methods=['POST'])
+def change_name():
+    index = int(request.form.get('index'))
+    val = request.form.get('val')
+    CREATORS[FILE_NAME].change_atr_name(TABLE_INDEX, index, val)
+    return redirect(url_for('show_table'))
+
+
+@app.route('/change_index/', methods=['POST'])
+def change_index():
+    index = int(request.form.get('index'))
+    val = int(request.form.get('val'))
+    CREATORS[FILE_NAME].change_atr_index(TABLE_INDEX, index, val)
+    return redirect(url_for('show_table'))
+
+
+@app.route('/change_type/', methods=['POST'])
+def change_type():
+    index = int(request.form.get('index'))
+    val = request.form.get('val')
+    varchar_num = int(request.form.get('varchar'))
+    CREATORS[FILE_NAME].change_atr_type(TABLE_INDEX, index, val, varchar_num)
+    return redirect(url_for('show_table'))
+
+
+@app.route('/change_constraint/', methods=['POST'])
+def change_constraint():
+    index = int(request.form.get('index'))
+    val = request.form.get('val')
+    CREATORS[FILE_NAME].change_atr_constraint(TABLE_INDEX, index, val)
+    return redirect(url_for('show_table'))
+
+
+@app.route('/change_fk_table/', methods=['POST'])
+def change_fk_table():
+    index = int(request.form.get('index'))
+    table_index = request.form.get('table_index')
+    if table_index is None:
+        return ''
+    table_index = int(table_index)
+
+    value = CREATORS[FILE_NAME].tables[table_index].name
+    CREATORS[FILE_NAME].change_atr_foreign_key(TABLE_INDEX, index, value, None)
+
+    dict = CREATORS[FILE_NAME].tables[table_index].attributes
+    dis = request.form.get('dis')
+    atr = CREATORS[FILE_NAME].tables[TABLE_INDEX].attributes[index]
+    return render_template('Selector.html', index=index, atr=atr, dict=dict, disabled=dis)
+
+
+@app.route('/change_fk_atr/', methods=['POST'])
+def change_fk_atr():
+    index = request.form.get('index')
+    if index is None:
+        redirect(url_for('show_table'))
+    index = int(index)
+    value = request.form.get('val')
+    CREATORS[FILE_NAME].change_atr_foreign_key(TABLE_INDEX, index, None, value)
+
+    return redirect(url_for('show_table'))
+
+
+@app.route('/logout', methods=['GET', 'POST'])
+def logout():
+    logout_user()
+    return redirect(url_for('login_page'))
+
+
+
+
